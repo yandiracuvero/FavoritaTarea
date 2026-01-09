@@ -1,0 +1,103 @@
+# =========================
+# R / RStudio
+# =========================
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+
+# RStudio project files
+.Rproj.user/
+*.Rproj
+
+# =========================
+# Session / workspace
+# =========================
+*.RDataTmp
+*.RData.*
+.RDS
+*.rds
+*.Rds
+
+# =========================
+# Build / check artifacts
+# =========================
+.Rcheck/
+*.tar.gz
+*.tgz
+
+# =========================
+# Caches and temporary files
+# =========================
+*_cache/
+cache/
+tmp/
+temp/
+*.tmp
+*.swp
+*~
+
+# knitr / rmarkdown outputs (ajusta según lo que quieras versionar)
+*_files/
+*.utf8.md
+*.knit.md
+
+# Quarto
+.quarto/
+_quarto/
+*.html
+*.pdf
+*.docx
+*.pptx
+
+# =========================
+# Plots / outputs (opcional)
+# =========================
+figures/
+plots/
+*.png
+*.jpg
+*.jpeg
+*.tiff
+*.bmp
+
+# =========================
+# Data (ajusta según tu caso)
+# =========================
+data-raw/
+*.csv
+*.tsv
+*.xlsx
+*.parquet
+*.feather
+*.rda
+*.RData
+
+# Si quieres versionar datos pequeños, elimina líneas específicas.
+# Recomendación: versionar scripts y metadatos; datos grandes en almacenamiento externo.
+
+# =========================
+# Renviron / credentials
+# =========================
+.Renviron
+.Renviron.*
+.env
+.env.*
+*.key
+*.pem
+credentials.json
+
+# =========================
+# Package dependency folders (si usas renv)
+# =========================
+renv/library/
+renv/python/
+renv/staging/
+# OJO: normalmente SÍ se versiona renv.lock
+# (no lo ignores)
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
