@@ -1,0 +1,296 @@
+---
+title: "Informe"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r, echo=FALSE, include=FALSE}
+#Librerías
+library(tsibble)
+library(dplyr)
+library(lubridate)
+library(fpp3)
+library(tidyverse)
+library(leaflet)
+library(zoo)
+library(fable)
+library(imputeTS)
+library(ggplot2)
+library(tidyr)
+library(stringr)
+library(patchwork)
+library(feasts)
+library(knitr)
+library(leaflet)
+library(readxl)
+#install.packages("GGally")
+library(GGally)
+library(fabletools)
+library(purrr)
+library(gt)
+library(knitr)
+library(kableExtra)
+```
+
+
+```{r, echo=FALSE, include=FALSE}
+df_stores <- "stores.csv"
+df_train <- "train.csv"
+
+df_stores <- read.csv(df_stores)
+df_train <- read.csv(df_train) |> 
+  filter(family %in% c("BREAD/BAKERY", "DAIRY"))
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+
+df <- df_train |> 
+  as_tibble() |> 
+  select(date, store_nbr, family, sales) |> 
+  mutate(date = as.Date(date)) |> 
+  as_tsibble(key = c(store_nbr, family), index = date) |> 
+  fill_gaps() |> 
+  fill(sales, .direction = "downup")
+
+```
+
+
+### Resumen Ejecutivo
+
+El objetivo principal de este trabajo es determinar el total de ventas de los productos BREAD/BAKERY y DAIRY en tiendas específicas de la Corporación La Favorita, determinadas mediante los siguientes aspectos,
+
+- Determinar las cinco tiendas que más venden el producto BREAD/BAKERY.
+
+- Identificar si al menos una de esas tiendas también vende el producto DAIRY.
+
+- Reemplazar la tienda cinco por la tienda que más venda productos BREAD/BAKERY y DAIRY a la vez. 
+
+Al realizar el análisis de los datos, se determinó que todas las tiendas que mas vendian el producto BREAD/BAKERY también vendian del producto DAIRY. Como conclusiones, se obtuvo que el comportamiento de la serie es muy parecido en el horizonte de pronóstico de 45 días, es por ello que se sugiere usar modelo dinámicos, pues ayudan a capturar de mejor forma los cambios en los patrones de la serie.
+
+### Introducción
+
+Las tiendas de Corporación Favorita en Ecuador son un gran conglomerado que incluye supermercados como Supermaxi, Megamaxi y Akí, además de tiendas especializadas como Juguetón, Maxi Home, Moblart, Maxi Pets, y negocios de tecnología y hogar con gran presencia en centros comerciales y a nivel nacional, ofreciendo una amplia gama de productos y servicios para el consumidor; entre los cuales destacan,
+
+- Productos para el hogar y muebles,
+- Productos para mascotas,
+- Productos de cuidado personal y belleza,
+- Comestibles,
+- Tecnología y servicios,
+- Entretenimiento, etc.
+
+Se consideran los productos BREAD/BAKERY y DAIRY para el análisis y pronóstico del total de ventas en los prócimos 45 días.
+
+
+### Análisis de Resultados
+
+Se obtuvo que las 5 tiendas que más venden el producto BREAD/BAKERY son las tiendas 3, 44, 45, 47 y 49. 
+
+
+```{r, echo=FALSE, warning=FALSE}
+ventas_BREAD_BAKERY <- df |>
+  as_tibble() |> 
+  filter(family == "BREAD/BAKERY") |> 
+  group_by(store_nbr) |> 
+  summarise(total_sales = sum(sales)) |> 
+  arrange(desc(total_sales))
+
+ventas_BREAD_BAKERY |>
+  slice_head(n = 5) |> 
+  gt() |>
+  tab_header(
+    title = "Top 5 tiendas que mas venden el producto BREAD/BAKERY",
+  ) |>
+  tab_options(
+    # Tamaños para el encabezado
+    heading.title.font.size = "12px",
+    heading.subtitle.font.size = "10px",
+    heading.padding = px(3),
+    
+    table.font.size = "small",  # Tamaño de fuente más pequeño
+    table.width = pct(50),      # Ancho de tabla al 50%
+    column_labels.font.size = "small",
+    data_row.padding = px(3)    # Reducir espacio entre filas
+  ) |>
+  fmt_number(                   # Formatear números
+    columns = total_sales,
+    decimals = 0,
+    sep_mark = ","
+  ) |>
+  cols_width(
+    store_nbr ~ px(80),         # Ancho fijo para columna
+    total_sales ~ px(120)
+  )
+```
+
+\vspace{2cm}
+
+Ahora, determinemos cuales de estas tiendas también venden el producto DAIRY.
+
+
+
+```{r, echo=FALSE, warning=FALSE}
+ventas_DAIRY <- df |> 
+  as_tibble() |> 
+  filter(store_nbr %in% c(3, 44, 45, 47, 49)) |> 
+  filter(family == "DAIRY") |> 
+  group_by(store_nbr) |> 
+  summarise(total_sales = sum(sales))
+
+ventas_DAIRY |>
+  slice_head(n = 5) |> 
+  gt() |>
+  tab_header(
+    title = "Tiendas que venden el producto BREAD/BAKERY y DAIRY",
+    subtitle = "Considerando las 5 tiendas que mas venden el producto BREAD/BAKERY"
+  ) |>
+  tab_options(
+    # Tamaños para el encabezado
+    heading.title.font.size = "12px",
+    heading.subtitle.font.size = "10px",
+    heading.padding = px(3),
+    
+    table.font.size = "small",  # Tamaño de fuente más pequeño
+    table.width = pct(50),      # Ancho de tabla al 50%
+    column_labels.font.size = "small",
+    data_row.padding = px(3)    # Reducir espacio entre filas
+  ) |>
+  fmt_number(                   # Formatear números
+    columns = total_sales,
+    decimals = 0,
+    sep_mark = ","
+  ) |>
+  cols_width(
+    store_nbr ~ px(80),         # Ancho fijo para columna
+    total_sales ~ px(120)
+  )
+
+```
+
+
+Al realizar el análisis se obtiene que todas las 5 tiendas venden el producto DAIRY. Ahora, reemplacemos la tienda 49, que es la tienda que menos ventas tiene del producto BREAD/BAKERY entre las 5 que mas venden este producto por la tienda que mas venda productos BREAD/BAKERY y DAIRY a la vez.
+
+
+
+```{r, echo=FALSE, warning=FALSE}
+ventas_BREAD_BAKERY_DAIRY <- df |> 
+  as_tibble() |> 
+  group_by(store_nbr, family) |> 
+  summarise(total_sales = sum(sales), .groups = "drop")
+
+ventas_BB <- ventas_BREAD_BAKERY_DAIRY |> 
+  filter(family == "BREAD/BAKERY", !store_nbr %in% c(3, 44, 45, 47, 49)) |> 
+  arrange(desc(total_sales))
+
+ventas_D <- ventas_BREAD_BAKERY_DAIRY |> 
+  filter(family == "DAIRY", !store_nbr %in% c(3, 44, 45, 47, 49)) |> 
+  arrange(desc(total_sales))
+
+ventas_BB |>
+  slice_head(n = 5) |> 
+  gt() |>
+  tab_header(
+    title = "Tiendas que mas venden el producto BREAD/BAKERY",
+    subtitle = "Sin considerar el top de las 5 tiendas que mas venden el producto BREAD/BAKERY"
+  ) |>
+  tab_options(
+    # Tamaños para el encabezado
+    heading.title.font.size = "12px",
+    heading.subtitle.font.size = "10px",
+    heading.padding = px(3),
+    
+    table.font.size = "small",  # Tamaño de fuente más pequeño
+    table.width = pct(50),      # Ancho de tabla al 50%
+    column_labels.font.size = "small",
+    data_row.padding = px(3)    # Reducir espacio entre filas
+  ) |>
+  fmt_number(                   # Formatear números
+    columns = total_sales,
+    decimals = 0,
+    sep_mark = ","
+  ) |>
+  cols_width(
+    store_nbr ~ px(80),         # Ancho fijo para columna
+    total_sales ~ px(120)
+  )
+
+ventas_D |>
+  slice_head(n = 5) |> 
+  gt() |>
+  tab_header(
+    title = "Tiendas que mas venden el producto DAIRY",
+    subtitle = "Sin considerar el top de las 5 tiendas que mas venden el producto BREAD/BAKERY"
+  ) |>
+  tab_options(
+    # Tamaños para el encabezado
+    heading.title.font.size = "12px",
+    heading.subtitle.font.size = "10px",
+    heading.padding = px(3),
+    
+    table.font.size = "small",  # Tamaño de fuente más pequeño
+    table.width = pct(50),      # Ancho de tabla al 50%
+    column_labels.font.size = "small",
+    data_row.padding = px(3)    # Reducir espacio entre filas
+  ) |>
+  fmt_number(                   # Formatear números
+    columns = total_sales,
+    decimals = 0,
+    sep_mark = ","
+  ) |>
+  cols_width(
+    store_nbr ~ px(80),         # Ancho fijo para columna
+    total_sales ~ px(120)
+  )
+
+```
+
+
+
+
+Por tanto, reemplazamos la tienda 49 por la tienda 51. Realicemos la predicción del total de ventas de los dos productos con el modelo ETS.
+
+
+```{r, echo=FALSE, warning=FALSE}
+ts <- df |> 
+  filter(store_nbr %in% c(3, 44, 45, 47, 51)) |> 
+  aggregate_key(family, ventas = sum(sales))
+
+fit <- ts |> 
+  model(
+    ets = ETS(ventas)
+  ) |> 
+  reconcile(
+    bu_ets = bottom_up(ets)
+  )
+
+fc <- fit |> forecast(h = 45)
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+fc |> 
+  filter(is_aggregated(family)) |> 
+  autoplot(
+    ts |> filter(year(date) >= 2017),
+    level = NULL
+  ) + geom_vline(xintercept = as.numeric(max(ts$date)), linetype="dotted") +
+  labs(
+    title = "Pronósticos del total de ventas de los productos BREAD/BAKERY y DAIRY",
+    subtitle = "Se muestra la gráfica solo desde el 2017 para mejor visualización"
+  )
+```
+
+
+### Conclusiones y Recomendaciones
+
+Si bien el total de ventas de ambos productos en las 5 tiendas presentan una gran variación en los valores, ajustando un modelo ETS se puede observar que la variación se reduce y el comportamiento del pronóstico de la serie es muy parecido en el horizonte de pronóstico de 45 días. Se recomienda usar un modelo de series dinámicas, pues este podría capturar de mejor forma los cambios en los patrones de la serie.
+
+### Bibliografía
+
+- https://www.kaggle.com/competitions/store-sales-time-series-forecasting
+
+- https://otexts.com/fpp3/arima-ets.html
+
+
